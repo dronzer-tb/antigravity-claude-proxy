@@ -256,19 +256,12 @@ export async function sendMessage(anthropicRequest, accountManager) {
                     );
                 }
 
-                if (accountManager.getAccountCount() === 1) {
-                    // Single account mode: wait for reset
-                    console.log(`[CloudCode] Single account rate-limited. Waiting ${formatDuration(waitMs)}...`);
-                    await sleep(waitMs);
-                    accountManager.clearExpiredLimits();
-                    account = accountManager.pickNext();
-                } else {
-                    // Multi-account: all exhausted - throw proper error
-                    throw new Error(
-                        `RESOURCE_EXHAUSTED: All ${accountManager.getAccountCount()} accounts rate-limited. ` +
-                        `quota will reset after ${formatDuration(waitMs)}. Next available: ${resetTime}`
-                    );
-                }
+                // Wait for reset (applies to both single and multi-account modes)
+                const accountCount = accountManager.getAccountCount();
+                console.log(`[CloudCode] All ${accountCount} account(s) rate-limited. Waiting ${formatDuration(waitMs)}...`);
+                await sleep(waitMs);
+                accountManager.clearExpiredLimits();
+                account = accountManager.pickNext();
             }
 
             if (!account) {
@@ -509,19 +502,12 @@ export async function* sendMessageStream(anthropicRequest, accountManager) {
                     );
                 }
 
-                if (accountManager.getAccountCount() === 1) {
-                    // Single account mode: wait for reset
-                    console.log(`[CloudCode] Single account rate-limited. Waiting ${formatDuration(waitMs)}...`);
-                    await sleep(waitMs);
-                    accountManager.clearExpiredLimits();
-                    account = accountManager.pickNext();
-                } else {
-                    // Multi-account: all exhausted - throw proper error
-                    throw new Error(
-                        `RESOURCE_EXHAUSTED: All ${accountManager.getAccountCount()} accounts rate-limited. ` +
-                        `quota will reset after ${formatDuration(waitMs)}. Next available: ${resetTime}`
-                    );
-                }
+                // Wait for reset (applies to both single and multi-account modes)
+                const accountCount = accountManager.getAccountCount();
+                console.log(`[CloudCode] All ${accountCount} account(s) rate-limited. Waiting ${formatDuration(waitMs)}...`);
+                await sleep(waitMs);
+                accountManager.clearExpiredLimits();
+                account = accountManager.pickNext();
             }
 
             if (!account) {
