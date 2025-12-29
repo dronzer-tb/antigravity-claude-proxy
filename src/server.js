@@ -381,6 +381,19 @@ app.get('/v1/models', async (req, res) => {
 });
 
 /**
+ * Count tokens endpoint (not supported)
+ */
+app.post('/v1/messages/count_tokens', (req, res) => {
+    res.status(501).json({
+        type: 'error',
+        error: {
+            type: 'not_implemented',
+            message: 'Token counting is not implemented. Use /v1/messages with max_tokens or configure your client to skip token counting.'
+        }
+    });
+});
+
+/**
  * Main messages endpoint - Anthropic Messages API compatible
  */
 app.post('/v1/messages', async (req, res) => {
