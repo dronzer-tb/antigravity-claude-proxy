@@ -66,16 +66,32 @@ export function rebuildModule(packagePath) {
         logger.info(`[NativeModule] Rebuilding native module at: ${packagePath}`);
 
         // Run npm rebuild in the package directory
-        execSync('npm rebuild', {
+        const output = execSync('npm rebuild', {
             cwd: packagePath,
             stdio: 'pipe', // Capture output instead of printing
             timeout: 120000 // 2 minute timeout
         });
 
+        // Log rebuild output for debugging
+        const outputStr = output?.toString().trim();
+        if (outputStr) {
+            logger.debug(`[NativeModule] Rebuild output:\n${outputStr}`);
+        }
+
         logger.success('[NativeModule] Rebuild completed successfully');
         return true;
     } catch (error) {
-        logger.error(`[NativeModule] Rebuild failed: ${error.message}`);
+        // Include stdout/stderr from the failed command for troubleshooting
+        const stdout = error.stdout?.toString().trim();
+        const stderr = error.stderr?.toString().trim();
+        let errorDetails = `[NativeModule] Rebuild failed: ${error.message}`;
+        if (stdout) {
+            errorDetails += `\n[NativeModule] stdout: ${stdout}`;
+        }
+        if (stderr) {
+            errorDetails += `\n[NativeModule] stderr: ${stderr}`;
+        }
+        logger.error(errorDetails);
         return false;
     }
 }
