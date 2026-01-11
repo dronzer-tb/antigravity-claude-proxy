@@ -489,3 +489,12 @@
 .skeleton-table-row {
   @apply skeleton h-12 w-full mb-2;
 }
+
+/* Desktop Sidebar Collapsed State */
+@media (min-width: 1024px) {
+  .sidebar-collapsed {
+    width: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+  }
+}

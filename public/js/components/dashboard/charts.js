@@ -260,7 +260,7 @@ window.DashboardCharts.updateCharts = function (component) {
             data: data,
             backgroundColor: colors,
             borderColor: getThemeColor("--color-space-950"),
-            borderWidth: 2,
+            borderWidth: 0,
             hoverOffset: 0,
             borderRadius: 0,
           },
