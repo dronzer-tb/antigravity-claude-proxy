@@ -278,7 +278,7 @@ export function createCountTokensHandler(accountManager) {
             const result = await countTokens(
                 { messages, model, system, tools, tool_choice, thinking },
                 accountManager,
-                { useAPI: false } // Default to local estimation for speed
+                { useAPI: true } // Use API for accurate token counting
             );
 
             res.json(result);
