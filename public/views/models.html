@@ -178,8 +178,10 @@
                         </td>
                         <td>
                             <div class="font-bold text-gray-200 group-hover:text-neon-purple transition-colors"
+                                :class="$store.settings.compact ? 'text-xs' : ''"
                                 x-text="row.modelId"></div>
                             <div class="text-[10px] font-mono text-gray-500 uppercase"
+                                x-show="!$store.settings.compact"
                                 x-text="$store.global.t('family' + row.family.charAt(0).toUpperCase() + row.family.slice(1))">
                             </div>
                         </td>
