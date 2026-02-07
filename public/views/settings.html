@@ -1062,6 +1062,15 @@
                                 x-transition:leave-end="opacity-0 -translate-y-1"
                                 class="mt-1.5 bg-space-800/50 rounded border border-space-border/30 px-2.5 py-2"
                                 :class="editingPresetConfig ? 'border-neon-cyan/30' : ''">
+                                <!-- UI/JSON mode toggle -->
+                                <div x-show="editingPresetConfig" class="flex gap-1 mb-2">
+                                    <button class="btn btn-xs"
+                                        :class="configEditMode === 'ui' ? 'bg-neon-cyan text-black' : 'btn-ghost text-gray-400'"
+                                        @click="switchConfigEditMode('ui')">UI</button>
+                                    <button class="btn btn-xs"
+                                        :class="configEditMode === 'json' ? 'bg-neon-cyan text-black' : 'btn-ghost text-gray-400'"
+                                        @click="switchConfigEditMode('json')">JSON</button>
+                                </div>
                                 <!-- Strategy badge (read-only) -->
                                 <div class="mb-2" x-show="!editingPresetConfig">
                                     <span class="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full border"
@@ -1069,42 +1078,51 @@
                                         x-text="preview.strategyLabel">
                                     </span>
                                 </div>
-                                <!-- Strategy dropdown (editing) -->
-                                <div class="mb-2" x-show="editingPresetConfig">
-                                    <label class="text-[10px] uppercase tracking-wider text-gray-600 font-semibold">Strategy</label>
-                                    <select class="select select-sm bg-space-800 border-space-border text-white text-xs w-full mt-0.5"
-                                        x-model="editingConfigDraft.accountSelection.strategy">
-                                        <option value="sticky" x-text="$store.global.t('strategyStickyLabel') || 'Sticky'"></option>
-                                        <option value="round-robin" x-text="$store.global.t('strategyRoundRobinLabel') || 'Round Robin'"></option>
-                                        <option value="hybrid" x-text="$store.global.t('strategyHybridLabel') || 'Hybrid'"></option>
-                                    </select>
-                                </div>
-                                <!-- Sections -->
-                                <template x-for="section in preview.sections" :key="section.label">
-                                    <div class="mb-1.5 last:mb-0">
-                                        <div class="text-[10px] uppercase tracking-wider text-gray-600 font-semibold mb-0.5" x-text="section.label"></div>
-                                        <template x-for="row in section.rows" :key="row.key">
-                                            <div class="flex justify-between items-center py-px gap-2">
-                                                <span class="text-[11px] text-gray-500 shrink-0" x-text="row.label"></span>
-                                                <!-- Read-only value -->
-                                                <span x-show="!editingPresetConfig" class="text-[11px] font-mono"
-                                                    :class="row.differs ? 'text-neon-cyan' : 'text-gray-400'"
-                                                    x-text="row.value"></span>
-                                                <!-- Editable input -->
-                                                <div x-show="editingPresetConfig" class="flex items-center gap-1">
-                                                    <input type="number"
-                                                        class="input input-xs bg-space-800 text-white font-mono text-[11px] w-20 text-right"
-                                                        :class="editingConfigErrors[row.key] ? '!border-red-500' : '!border-space-border'"
-                                                        :min="row.min" :max="row.max" :step="row.step"
-                                                        :value="editingConfigDraft[row.key]"
-                                                        @change="validatePresetConfigField(row.key, $event.target.value)"
-                                                        @input="editingConfigDraft[row.key] = Number($event.target.value)">
-                                                    <span x-show="row.suffix" class="text-[10px] text-gray-600 w-5" x-text="row.suffix"></span>
-                                                </div>
-                                            </div>
-                                        </template>
+                                <!-- UI mode content (read-only + UI editing) -->
+                                <div x-show="configEditMode === 'ui' || !editingPresetConfig">
+                                    <!-- Strategy dropdown (editing) -->
+                                    <div class="mb-2" x-show="editingPresetConfig">
+                                        <label class="text-[10px] uppercase tracking-wider text-gray-600 font-semibold">Strategy</label>
+                                        <select class="select select-sm bg-space-800 border-space-border text-white text-xs w-full mt-0.5"
+                                            x-model="editingConfigDraft.accountSelection.strategy">
+                                            <option value="sticky" x-text="$store.global.t('strategyStickyLabel') || 'Sticky'"></option>
+                                            <option value="round-robin" x-text="$store.global.t('strategyRoundRobinLabel') || 'Round Robin'"></option>
+                                            <option value="hybrid" x-text="$store.global.t('strategyHybridLabel') || 'Hybrid'"></option>
+                                        </select>
                                     </div>
-                                </template>
+                                    <!-- Sections -->
+                                    <template x-for="section in preview.sections" :key="section.label">
+                                        <div class="mb-1.5 last:mb-0">
+                                            <div class="text-[10px] uppercase tracking-wider text-gray-600 font-semibold mb-0.5" x-text="section.label"></div>
+                                            <template x-for="row in section.rows" :key="row.key">
+                                                <div class="flex justify-between items-center py-px gap-2">
+                                                    <span class="text-[11px] text-gray-500 shrink-0" x-text="row.label"></span>
+                                                    <!-- Read-only value -->
+                                                    <span x-show="!editingPresetConfig" class="text-[11px] font-mono"
+                                                        :class="row.differs ? 'text-neon-cyan' : 'text-gray-400'"
+                                                        x-text="row.value"></span>
+                                                    <!-- Editable input -->
+                                                    <div x-show="editingPresetConfig" class="flex items-center gap-1">
+                                                        <input type="number"
+                                                            class="input input-xs bg-space-800 text-white font-mono text-[11px] w-20 text-right"
+                                                            :class="editingConfigErrors[row.key] ? '!border-red-500' : '!border-space-border'"
+                                                            :min="row.min" :max="row.max" :step="row.step"
+                                                            :value="editingConfigDraft[row.key]"
+                                                            @change="validatePresetConfigField(row.key, $event.target.value)"
+                                                            @input="editingConfigDraft[row.key] = Number($event.target.value)">
+                                                        <span x-show="row.suffix" class="text-[10px] text-gray-600 w-5" x-text="row.suffix"></span>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                                <!-- JSON mode content -->
+                                <div x-show="editingPresetConfig && configEditMode === 'json'">
+                                    <textarea class="textarea w-full font-mono text-[11px] bg-space-800 border-space-border text-white leading-relaxed"
+                                        rows="14" x-model="editingJsonText" @input="validateJsonText()"></textarea>
+                                    <p x-show="jsonParseError" class="text-[10px] text-red-400 mt-1" x-text="jsonParseError"></p>
+                                </div>
                                 <!-- Save/Cancel buttons -->
                                 <div x-show="editingPresetConfig" class="flex justify-end gap-2 mt-2 pt-2 border-t border-space-border/20">
                                     <button class="btn btn-xs btn-ghost text-gray-400"

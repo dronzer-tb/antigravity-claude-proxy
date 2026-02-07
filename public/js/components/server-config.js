@@ -25,6 +25,9 @@ window.Components.serverConfig = () => ({
     editingConfigDraft: {},
     editingConfigErrors: {},
     savingPresetConfig: false,
+    configEditMode: 'ui',
+    editingJsonText: '',
+    jsonParseError: null,
 
     init() {
         // Initial fetch if this is the active sub-tab
@@ -772,12 +775,78 @@ window.Components.serverConfig = () => ({
         this.editingConfigErrors = {};
         this.editingPresetConfig = true;
         this.presetPreviewExpanded = true;
+        this.configEditMode = 'ui';
+        this.editingJsonText = '';
+        this.jsonParseError = null;
     },
 
     cancelPresetConfigEdit() {
         this.editingPresetConfig = false;
         this.editingConfigDraft = {};
         this.editingConfigErrors = {};
+        this.configEditMode = 'ui';
+        this.editingJsonText = '';
+        this.jsonParseError = null;
+    },
+
+    switchConfigEditMode(mode) {
+        if (mode === this.configEditMode) return;
+
+        if (mode === 'json') {
+            // UI → JSON: serialize draft to pretty JSON with fraction quota
+            const obj = { ...this.editingConfigDraft };
+            obj.globalQuotaThreshold = obj.globalQuotaThreshold / 100;
+            this.editingJsonText = JSON.stringify(obj, null, 2);
+            this.jsonParseError = null;
+            this.editingConfigErrors = {};
+            this.configEditMode = 'json';
+        } else {
+            // JSON → UI: parse and populate draft
+            try {
+                const parsed = JSON.parse(this.editingJsonText);
+                if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+                    this.jsonParseError = Alpine.store('global').t('invalidJson') || 'Invalid JSON';
+                    return;
+                }
+                // Convert fraction to percentage for UI
+                const draft = { ...parsed };
+                if (typeof draft.globalQuotaThreshold === 'number') {
+                    draft.globalQuotaThreshold = Math.round(draft.globalQuotaThreshold * 100);
+                }
+                // Ensure accountSelection structure
+                if (!draft.accountSelection) {
+                    draft.accountSelection = { strategy: 'hybrid' };
+                } else if (typeof draft.accountSelection === 'object' && !draft.accountSelection.strategy) {
+                    draft.accountSelection.strategy = 'hybrid';
+                }
+                this.editingConfigDraft = draft;
+                this.editingConfigErrors = {};
+                this.jsonParseError = null;
+                // Re-validate all fields
+                const keys = ['maxRetries', 'retryBaseMs', 'retryMaxMs', 'defaultCooldownMs',
+                    'maxWaitBeforeErrorMs', 'maxAccounts', 'globalQuotaThreshold',
+                    'rateLimitDedupWindowMs', 'maxConsecutiveFailures', 'extendedCooldownMs', 'maxCapacityRetries'];
+                keys.forEach(k => {
+                    if (draft[k] !== undefined) this.validatePresetConfigField(k, draft[k]);
+                });
+                this.configEditMode = 'ui';
+            } catch (e) {
+                this.jsonParseError = Alpine.store('global').t('invalidJson') || 'Invalid JSON';
+            }
+        }
+    },
+
+    validateJsonText() {
+        try {
+            const parsed = JSON.parse(this.editingJsonText);
+            if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+                this.jsonParseError = Alpine.store('global').t('invalidJson') || 'Invalid JSON';
+            } else {
+                this.jsonParseError = null;
+            }
+        } catch {
+            this.jsonParseError = Alpine.store('global').t('invalidJson') || 'Invalid JSON';
+        }
     },
 
     validatePresetConfigField(key, value) {
@@ -808,6 +877,7 @@ window.Components.serverConfig = () => ({
     },
 
     hasPresetConfigErrors() {
+        if (this.configEditMode === 'json') return !!this.jsonParseError;
         return Object.keys(this.editingConfigErrors).length > 0;
     },
 
@@ -818,13 +888,24 @@ window.Components.serverConfig = () => ({
         const presetName = this.selectedServerPreset;
         if (!presetName) return;
 
-        // Build config payload, converting quota % back to fraction
-        const draft = { ...this.editingConfigDraft };
-        draft.globalQuotaThreshold = draft.globalQuotaThreshold / 100;
-        const { accountSelection, ...numericFields } = draft;
-        const configPayload = { ...numericFields };
-        if (accountSelection) {
-            configPayload.accountSelection = accountSelection;
+        let configPayload;
+        if (this.configEditMode === 'json') {
+            // Parse JSON textarea directly into config payload
+            try {
+                configPayload = JSON.parse(this.editingJsonText);
+            } catch {
+                this.jsonParseError = store.t('invalidJson') || 'Invalid JSON';
+                return;
+            }
+        } else {
+            // Build config payload from UI draft, converting quota % back to fraction
+            const draft = { ...this.editingConfigDraft };
+            draft.globalQuotaThreshold = draft.globalQuotaThreshold / 100;
+            const { accountSelection, ...numericFields } = draft;
+            configPayload = { ...numericFields };
+            if (accountSelection) {
+                configPayload.accountSelection = accountSelection;
+            }
         }
 
         this.savingPresetConfig = true;
@@ -850,6 +931,9 @@ window.Components.serverConfig = () => ({
                 this.editingPresetConfig = false;
                 this.editingConfigDraft = {};
                 this.editingConfigErrors = {};
+                this.configEditMode = 'ui';
+                this.editingJsonText = '';
+                this.jsonParseError = null;
                 store.showToast(store.t('presetConfigSaved') || 'Preset config updated', 'success');
             } else {
                 throw new Error(data.error || 'Failed to save preset config');
