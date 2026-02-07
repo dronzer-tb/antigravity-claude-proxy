@@ -20,6 +20,7 @@ window.Components.serverConfig = () => ({
     newServerPresetDescription: '',
     editingPresetMode: false,
     editingPresetOriginalName: '',
+    presetPreviewExpanded: false,
 
     init() {
         // Initial fetch if this is the active sub-tab
@@ -642,5 +643,92 @@ window.Components.serverConfig = () => ({
     isSelectedPresetBuiltIn() {
         const preset = this.serverPresets.find(p => p.name === this.selectedServerPreset);
         return preset?.builtIn === true;
+    },
+
+    /**
+     * Format a millisecond value to a human-readable string.
+     * e.g. 60000 → "1m", 1000 → "1s", 1500 → "1.5s", 90000 → "1m 30s"
+     */
+    formatMsValue(ms) {
+        if (ms == null) return '—';
+        if (ms < 1000) return ms + 'ms';
+        const totalSeconds = ms / 1000;
+        if (totalSeconds < 60) {
+            return Number.isInteger(totalSeconds) ? totalSeconds + 's' : totalSeconds.toFixed(1) + 's';
+        }
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        if (seconds === 0) return minutes + 'm';
+        return minutes + 'm ' + (Number.isInteger(seconds) ? seconds : seconds.toFixed(1)) + 's';
+    },
+
+    /**
+     * Get preview sections for the currently selected preset.
+     * Returns { strategy, strategyLabel, sections } where each section has { label, rows }.
+     * Each row has { label, value, differs } where differs is true when the preset
+     * value doesn't match the current running serverConfig.
+     */
+    getPresetPreviewSections() {
+        const preset = this.serverPresets.find(p => p.name === this.selectedServerPreset);
+        if (!preset?.config) return null;
+
+        const cfg = preset.config;
+        const cur = this.serverConfig;
+        const store = Alpine.store('global');
+
+        const strategy = cfg.accountSelection?.strategy || 'hybrid';
+        const currentStrategy = cur.accountSelection?.strategy || 'hybrid';
+
+        const differs = (presetVal, currentVal) => {
+            if (presetVal == null && currentVal == null) return false;
+            if (presetVal == null || currentVal == null) return true;
+            return JSON.stringify(presetVal) !== JSON.stringify(currentVal);
+        };
+
+        const fmtQuota = (val) => {
+            if (!val || val === 0) return store.t('quotaDisabled') || 'Disabled';
+            return Math.round(val * 100) + '%';
+        };
+
+        const sections = [
+            {
+                label: store.t('networkRetry') || 'Network Retry Settings',
+                rows: [
+                    { label: store.t('maxRetries') || 'Max Retries', value: cfg.maxRetries ?? '—', differs: differs(cfg.maxRetries, cur.maxRetries) },
+                    { label: store.t('retryBaseDelay') || 'Retry Base Delay', value: this.formatMsValue(cfg.retryBaseMs), differs: differs(cfg.retryBaseMs, cur.retryBaseMs) },
+                    { label: store.t('retryMaxDelay') || 'Retry Max Delay', value: this.formatMsValue(cfg.retryMaxMs), differs: differs(cfg.retryMaxMs, cur.retryMaxMs) },
+                ]
+            },
+            {
+                label: store.t('rateLimiting') || 'Rate Limiting',
+                rows: [
+                    { label: store.t('defaultCooldown') || 'Default Cooldown', value: this.formatMsValue(cfg.defaultCooldownMs), differs: differs(cfg.defaultCooldownMs, cur.defaultCooldownMs) },
+                    { label: store.t('maxWaitThreshold') || 'Max Wait Before Error', value: this.formatMsValue(cfg.maxWaitBeforeErrorMs), differs: differs(cfg.maxWaitBeforeErrorMs, cur.maxWaitBeforeErrorMs) },
+                    { label: 'Max Accounts', value: cfg.maxAccounts ?? '—', differs: differs(cfg.maxAccounts, cur.maxAccounts) },
+                ]
+            },
+            {
+                label: store.t('quotaProtection') || 'Quota Protection',
+                rows: [
+                    { label: store.t('minimumQuotaLevel') || 'Minimum Quota Level', value: fmtQuota(cfg.globalQuotaThreshold), differs: differs(cfg.globalQuotaThreshold, cur.globalQuotaThreshold) },
+                ]
+            },
+            {
+                label: store.t('errorHandlingTuning') || 'Error Handling',
+                rows: [
+                    { label: store.t('rateLimitDedupWindow') || 'Dedup Window', value: this.formatMsValue(cfg.rateLimitDedupWindowMs), differs: differs(cfg.rateLimitDedupWindowMs, cur.rateLimitDedupWindowMs) },
+                    { label: store.t('maxConsecutiveFailures') || 'Max Consecutive Failures', value: cfg.maxConsecutiveFailures ?? '—', differs: differs(cfg.maxConsecutiveFailures, cur.maxConsecutiveFailures) },
+                    { label: store.t('extendedCooldown') || 'Extended Cooldown', value: this.formatMsValue(cfg.extendedCooldownMs), differs: differs(cfg.extendedCooldownMs, cur.extendedCooldownMs) },
+                    { label: store.t('maxCapacityRetries') || 'Max Capacity Retries', value: cfg.maxCapacityRetries ?? '—', differs: differs(cfg.maxCapacityRetries, cur.maxCapacityRetries) },
+                ]
+            }
+        ];
+
+        return {
+            strategy,
+            strategyLabel: this.getStrategyLabel(strategy),
+            strategyDiffers: differs(strategy, currentStrategy),
+            sections
+        };
     }
 });
