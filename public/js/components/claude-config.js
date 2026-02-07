@@ -484,7 +484,10 @@ window.Components.claudeConfig = () => ({
 
             if (data.status === 'ok') {
                 this.currentMode = data.mode;
-                this.config = data.config || this.config;
+                if (data.config) {
+                    this.config = data.config;
+                    if (!this.config.env) this.config.env = {};
+                }
                 Alpine.store('global').showToast(data.message, 'success');
 
                 // Refresh the config and mode state
