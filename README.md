@@ -1,3 +1,5 @@
+# ⚠️ DO NOT USE THIS ANYMORE – GOOGLE IS ISSUING TOS VIOLATION BANS FOR THE ACCOUNTS CONNECTED
+
 # Antigravity Claude Proxy
 
 [![npm version](https://img.shields.io/npm/v/antigravity-claude-proxy.svg)](https://www.npmjs.com/package/antigravity-claude-proxy)
